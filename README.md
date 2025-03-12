@@ -72,7 +72,7 @@ If you have Cmake and MSVC installed, things should be fairly simple. The projec
 Clone this repo and make a build directory
 
 ```
-git clone --recursive https://github.com/wiredopposite/XGDTool.git
+git clone --recursive https://github.com/ThePlayer14/XGDTool_linux.git
 cd XGDTool
 mkdir build
 cd build
@@ -100,7 +100,7 @@ sudo apt-get install pkg-config liblz4-dev libzstd-dev libssl-dev libcurl4-opens
 ```
 Clone this repo and make a build directory
 ```
-git clone --recursive https://github.com/wiredopposite/XGDTool.git
+git clone --recursive https://github.com/ThePlayer14/XGDTool_linux.git
 cd XGDTool
 mkdir build
 cd build
