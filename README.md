@@ -4,6 +4,7 @@
 XGDTool is an OG Xbox and Xbox 360 disc utility, capable of converting discs to and from any mainstream format. It's available as a GUI or CLI app.
 
 This program is still in initial testing. If you experience an issue, please report it in the Issues tab and help make this program better!
+Also, if you encounter something not resolved in this repository, post your issue to the [original repository!](https://github.com/wiredopposite/XGDTool/issues)
 
 ## Features
 - Supports convertion between following formats:
@@ -64,10 +65,10 @@ These arguments can be stacked, though not all output formats will use them, in 
 - ```--quiet```          Disable all logging except for warnings and errors.
 
 ## Build
-By default this compiles as a GUI, configure Cmake with ```-DENABLE_GUI=OFF``` to compile for CLI. To compile for x86 there would need to be several changes made to the CmakeLists.txt and cmake/seutp_vcpkg.cmake files to accound for that.
+By default this compiles as a GUI, configure CMake with ```-DENABLE_GUI=OFF``` to compile for CLI. To compile for x86 there would need to be several changes made to the CmakeLists.txt and cmake/seutp_vcpkg.cmake files to accound for that.
 
 ### Windows
-If you have Cmake and MSVC installed, things should be fairly simple. The project has been setup for Windows so that it will automatically download and build all dependancies with vcpkg inside the project directory by configuring with Cmake. This can take a while depending on your internet speeds and PC specs but only has to happen once.
+If you have CMake and MSVC installed, things should be fairly simple. The project has been setup for Windows so that it will automatically download and build all dependencies with vcpkg inside the project directory by configuring with CMake. This can take a while depending on your internet speeds and PC specs but only has to happen once.
 
 Clone this repo and make a build directory
 
@@ -116,13 +117,17 @@ cd build
 Configure as GUI: 
 ```
 cmake ..
-``` 
+```
 or as CLI: 
 ```
 cmake -DENABLE_GUI=OFF ..
 ```
+You can also use the CMake GUI to perform configuration of the tool, and you can specify a different compiler if that's you'd like to do.
 
 Build
 ```
 make
 ```
+## Notes about the Linux build
+* The files / games you want to process must be on an ext4 or other linux-native filesystem. The tool will have issues with mounted NTFS volumes.
+* Since not all functions have been tested on Linux, your mileage may vary with the available options. ZAR image creation from GoD folder works nicely.
