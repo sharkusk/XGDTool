@@ -1,6 +1,6 @@
 #ifndef _STRING_UTILS_H_
 #define _STRING_UTILS_H_
-
+#include <cstdint>
 #include <string>
 #include <vector>
 
