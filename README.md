@@ -7,7 +7,7 @@ This program is still in initial testing. If you experience an issue, please rep
 Also, if you encounter something not resolved in this repository, post your issue to the [original repository!](https://github.com/wiredopposite/XGDTool/issues)
 
 ## Features
-- Supports convertion between following formats:
+- Supports conversion between following formats:
     - ISO / XISO
     - Extracted files (Xex / Xbe / HDD Ready)
     - GoD / Games on Demand
@@ -65,10 +65,10 @@ These arguments can be stacked, though not all output formats will use them, in 
 - ```--quiet```          Disable all logging except for warnings and errors.
 
 ## Build
-By default this compiles as a GUI, configure CMake with ```-DENABLE_GUI=OFF``` to compile for CLI. To compile for x86 there would need to be several changes made to the CmakeLists.txt and cmake/seutp_vcpkg.cmake files to accound for that.
+By default this tool compiles with a GUI, configure CMake with ```-DENABLE_GUI=OFF``` to compile as a CLI application. To compile for 32bit / x86, there would need to be several changes made to the CMakeLists.txt and cmake/setup_vcpkg.cmake files to account for that.
 
 ### Windows
-If you have CMake and MSVC installed, things should be fairly simple. The project has been setup for Windows so that it will automatically download and build all dependencies with vcpkg inside the project directory by configuring with CMake. This can take a while depending on your internet speeds and PC specs but only has to happen once.
+If you have CMake and MSVC installed, things should be fairly simple. The project has been setup for Windows so that it will automatically download and build all dependencies with vcpkg inside the project directory by configuring with CMake. This can take a while depending on your internet speed and PC specs but it's an one-time process.
 
 Clone this repo and make a build directory
 
