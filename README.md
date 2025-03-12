@@ -93,10 +93,18 @@ cmake --build . --config Release
 ```
 
 ### Linux
-This app has not yet been tested extensively for Linux, Linux also has some quirks with wxWidgets so the GUI doesn't look exactly as it should. It's been tested with Clang, in addition to Clang, Make, and Cmake, you'll need to install some other dependancies:
+This app has not yet been tested extensively for Linux, Linux also has some quirks with wxWidgets so the GUI doesn't look exactly as it should. It's been tested with Clang, in addition to Clang, Make, and CMake, you'll need to install some other dependencies:
+
+Ubuntu / Debian
 ```
 sudo apt update
 sudo apt-get install pkg-config liblz4-dev libzstd-dev libssl-dev libcurl4-openssl-dev libwxgtk3.0-gtk3-dev
+```
+
+Fedora
+```
+sudo dnf update
+sudo dnf install pkgconf libzstd-devel lz4-devel libssl47 openssl-devel wxgtk-devel libcurl-devel
 ```
 Clone this repo and make a build directory
 ```
