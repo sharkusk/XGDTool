@@ -1,5 +1,5 @@
 #include <cstring>
-
+#include <algorithm>
 #include "AvlTree/AvlIterator.h"
 #include "ImageWriter/CSOWriter/CSOWriter.h"
 
