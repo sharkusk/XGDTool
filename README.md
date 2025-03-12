@@ -93,7 +93,7 @@ cmake --build . --config Release
 ```
 
 ### Linux
-This app has not yet been tested extensively for Linux, Linux also has some quirks with wxWidgets so the GUI doesn't look exactly as it should. It's been tested with Clang, in addition to Clang, Make, and CMake, you'll need to install some other dependencies:
+This app has not yet been tested extensively for Linux, Linux also has some quirks with wxWidgets so the GUI doesn't look exactly as it should. It's been tested with Clang and GCC. In addition to Clang, Make, and CMake, you'll need to install some other dependencies:
 
 Ubuntu / Debian
 ```
