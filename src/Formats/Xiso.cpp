@@ -1,5 +1,5 @@
 #include <cstring>
-
+#include <cstdint>
 #include "XGDLog.h"
 #include "Formats/Xiso.h"
 
