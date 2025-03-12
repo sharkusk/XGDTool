@@ -1,6 +1,6 @@
 #include <cctype>
 #include <cstring>
-
+#include <algorithm>
 #include "Utils/EndianUtils.h"
 #include "Utils/StringUtils.h"
 #include "AvlTree/AvlIterator.h"
