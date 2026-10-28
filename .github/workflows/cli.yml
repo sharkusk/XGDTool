@@ -1,0 +1,126 @@
+name: CLI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: cli-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            os: ubuntu-latest
+          - name: macos
+            os: macos-latest
+          - name: windows
+            os: windows-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          submodules: false
+
+      - name: Checkout build submodules
+        run: git submodule update --init external/ZArchive external/cmake-bin2h
+
+      - name: Checkout vcpkg
+        if: runner.os == 'Windows'
+        run: git submodule update --init external/vcpkg
+
+      - name: Read vcpkg commit
+        if: runner.os == 'Windows'
+        id: vcpkg-rev
+        run: echo "rev=$(git rev-parse HEAD:external/vcpkg)" >> "$GITHUB_OUTPUT"
+
+      # vcpkg's x-gha cache backend was removed. Cache the file store instead.
+      - name: Restore vcpkg cache
+        if: runner.os == 'Windows'
+        id: vcpkg-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: vcpkg-binary-cache
+          key: vcpkg-x64-windows-static-${{ steps.vcpkg-rev.outputs.rev }}
+
+      - name: Point vcpkg at the binary cache
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $cache = Join-Path $env:GITHUB_WORKSPACE "vcpkg-binary-cache"
+          New-Item -ItemType Directory -Force -Path $cache | Out-Null
+          $cache = $cache.Replace('\', '/')
+          "VCPKG_BINARY_SOURCES=clear;files,$cache,readwrite" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8NoBOM
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config liblz4-dev libzstd-dev libssl-dev libcurl4-openssl-dev
+
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_ENV_HINTS: 1
+        run: brew install pkg-config lz4 zstd openssl
+
+      - name: Configure
+        run: |
+          args=(-S . -B build -DENABLE_GUI=OFF -DCMAKE_BUILD_TYPE=Release)
+          if [ "$(uname -s)" = "Darwin" ]; then
+            args+=("-DOPENSSL_ROOT_DIR=$(brew --prefix openssl)")
+          fi
+          cmake "${args[@]}"
+
+      - name: Save vcpkg cache
+        if: runner.os == 'Windows' && steps.vcpkg-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: vcpkg-binary-cache
+          key: vcpkg-x64-windows-static-${{ steps.vcpkg-rev.outputs.rev }}
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Smoke test
+        run: |
+          set -eu
+          bin=
+          while IFS= read -r candidate; do
+            bin=$candidate
+            break
+          done < <(find build -type f \( -name XGDTool -o -name XGDTool.exe \) ! -path '*/CMakeFiles/*')
+          if [ -z "${bin}" ]; then
+            echo "XGDTool binary not found"
+            find build -type f | head -100
+            exit 1
+          fi
+          echo "Using ${bin}"
+          "${bin}" --help
+          "${bin}" --version
+          mkdir -p build/dist
+          cp "${bin}" build/dist/
+
+      - name: Upload CLI
+        uses: actions/upload-artifact@v7
+        with:
+          name: XGDTool-${{ matrix.name }}
+          path: build/dist/*
+          if-no-files-found: error

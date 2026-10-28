@@ -26,13 +26,13 @@ if(MSVC)
     set(CMAKE_EXE_LINKER_FLAGS_RELEASE "/LTCG /INCREMENTAL:NO")
     set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "/LTCG /INCREMENTAL:NO")
     set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "/LTCG /INCREMENTAL:NO")
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
     set(CMAKE_CXX_FLAGS_RELEASE "-O2 -flto")
     set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-flto")
     set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "-flto")
     set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "-flto")
-elseif(UNIX)
+elseif(UNIX AND NOT APPLE)
     set(CMAKE_CXX_STANDARD_LIBRARIES "-L/usr/lib/x86_64-linux-gnu/ -lstdc++")
 endif()
 
@@ -123,13 +123,12 @@ if (WIN32)
     find_package(CLI11 CONFIG REQUIRED)
     find_package(OpenSSL CONFIG REQUIRED)
     find_package(CURL REQUIRED)
-    find_package(wxWidgets CONFIG REQUIRED)
+    if(ENABLE_GUI)
+        find_package(wxWidgets CONFIG REQUIRED)
+    endif()
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
         zarchive
-
-        wx::core 
-        wx::base
 
         lz4::liblz4
         zstd::libzstd
@@ -139,6 +138,10 @@ if (WIN32)
         OpenSSL::Crypto
         CURL::libcurl
     )
+
+    if(ENABLE_GUI)
+        target_link_libraries(${PROJECT_NAME} PRIVATE wx::core wx::base)
+    endif()
 
     if(MSVC)
         target_compile_options(zarchive PRIVATE /wd4244)
@@ -170,52 +173,47 @@ elseif(UNIX)
     find_package(PkgConfig REQUIRED)
     set(ENV{PKG_CONFIG_PATH} "/usr/local/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 
-    pkg_check_modules(LZ4 REQUIRED liblz4)
-    pkg_check_modules(ZSTD REQUIRED libzstd)
+    pkg_check_modules(LZ4 REQUIRED IMPORTED_TARGET liblz4)
+    pkg_check_modules(ZSTD REQUIRED IMPORTED_TARGET libzstd)
     find_package(OpenSSL REQUIRED)
     find_package(CURL REQUIRED)
-    find_package(wxWidgets REQUIRED COMPONENTS core base)
+    if(ENABLE_GUI)
+        find_package(wxWidgets REQUIRED COMPONENTS core base)
+
+        execute_process(
+            COMMAND wx-config --cxxflags
+            OUTPUT_VARIABLE wxWidgets_CXX_FLAGS
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${wxWidgets_CXX_FLAGS} -Wno-ambiguous-reversed-operator")
+        include_directories(SYSTEM ${wxWidgets_INCLUDE_DIRS})
+        link_directories(${wxWidgets_LIBRARY_DIRS})
+
+        execute_process(
+            COMMAND wx-config --libs
+            OUTPUT_VARIABLE wxWidgets_LIBS
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+    endif()
 
     include_directories(
         ${CMAKE_SOURCE_DIR}/external
-        ${LZ4_INCLUDE_DIRS} 
-        ${ZSTD_INCLUDE_DIRS} 
         ${OPENSSL_INCLUDE_DIR} 
         ${CURL_INCLUDE_DIRS} 
-        ${wxWidgets_INCLUDE_DIRS}
-    )
-
-    link_directories(
-        ${LZ4_LIBRARY_DIRS} 
-        ${ZSTD_LIBRARY_DIRS} 
-        ${OPENSSL_LIBRARIES} 
-        ${CURL_LIBRARIES} 
-        ${wxWidgets_LIBRARY_DIRS}
-    )
-
-    execute_process(
-        COMMAND wx-config --cxxflags
-        OUTPUT_VARIABLE wxWidgets_CXX_FLAGS
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${wxWidgets_CXX_FLAGS} -Wno-ambiguous-reversed-operator")
-    include_directories(SYSTEM ${wxWidgets_INCLUDE_DIRS})
-
-    execute_process(
-        COMMAND wx-config --libs
-        OUTPUT_VARIABLE wxWidgets_LIBS
-        OUTPUT_STRIP_TRAILING_WHITESPACE
     )
 
     target_link_libraries(${PROJECT_NAME} PRIVATE 
         zarchive 
-        ${LZ4_LIBRARIES} 
-        ${ZSTD_LIBRARIES} 
+        PkgConfig::LZ4
+        PkgConfig::ZSTD
         ${OPENSSL_LIBRARIES} 
         ${CURL_LIBRARIES} 
-        ${wxWidgets_LIBS}
     )
+
+    if(ENABLE_GUI)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${wxWidgets_LIBS})
+    endif()
 
 else()
 

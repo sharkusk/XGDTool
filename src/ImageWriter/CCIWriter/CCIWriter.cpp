@@ -251,7 +251,7 @@ void CCIWriter::write_file_from_reader(std::ofstream& out_file, std::vector<CCI:
 
     while (bytes_remaining > 0) 
     {
-        uint64_t read_size = std::min(bytes_remaining, read_buffer.size());
+        uint64_t read_size = std::min(bytes_remaining, static_cast<uint64_t>(read_buffer.size()));
 
         image_reader.read_bytes(read_position, read_size, read_buffer.data());
 
@@ -284,7 +284,7 @@ void CCIWriter::write_file_from_dir(std::ofstream& out_file, std::vector<CCI::In
 
     while (bytes_remaining > 0) 
     {
-        uint64_t read_size = std::min(bytes_remaining, read_buffer.size());
+        uint64_t read_size = std::min(bytes_remaining, static_cast<uint64_t>(read_buffer.size()));
 
         in_file.read(read_buffer.data(), read_size);
         if (in_file.fail()) 
