@@ -1,10 +1,16 @@
 # XGDTool
-<img src="https://github.com/wiredopposite/XGDTool/blob/master/resources/Screenshot.png" alt="App" width="700"/>
 
-XGDTool is an OG Xbox and Xbox 360 disc utility, capable of converting discs to and from any mainstream format. It's available as a GUI or CLI app.
+This is a command-line-only fork of [wiredopposite/XGDTool](https://github.com/wiredopposite/XGDTool). It converts original Xbox and Xbox 360 discs between the usual image formats.
 
-This program is still in initial testing. If you experience an issue, please report it in the Issues tab and help make this program better!
-Also, if you encounter something not resolved in this repository, post your issue to the [original repository!](https://github.com/wiredopposite/XGDTool/issues)
+Each [release](https://github.com/sharkusk/XGDTool/releases) includes a CLI binary for all three platforms:
+
+- `XGDTool-windows` (`XGDTool.exe`)
+- `XGDTool-linux`
+- `XGDTool-macos`
+
+This fork does not build or ship the graphical interface. That program remains in the original repository.
+
+This program is still in initial testing. Report issues in this repository's Issues tab.
 
 ## Features
 - Supports conversion between following formats:
@@ -26,11 +32,12 @@ Also, if you encounter something not resolved in this repository, post your issu
 - Online database lookup for accurate file naming (can be disabled).
 
 ## CLI Usage
-```XGDTool.exe <output_format> <settings_flags> <input_path> <output_directory>```
 
-or on Linux
+On Windows the program is `XGDTool.exe`. On Linux and macOS it is `XGDTool`.
 
-```XGDTool <output_format> <settings_flags> <input_path> <output_directory>```
+```
+XGDTool <output_format> <settings_flags> <input_path> <output_directory>
+```
 
 Settings flags and output directory are optional.
 
@@ -65,69 +72,53 @@ These arguments can be stacked, though not all output formats will use them, in 
 - ```--quiet```          Disable all logging except for warnings and errors.
 
 ## Build
-By default this tool compiles with a GUI, configure CMake with ```-DENABLE_GUI=OFF``` to compile as a CLI application. To compile for 32bit / x86, there would need to be several changes made to the CMakeLists.txt and cmake/setup_vcpkg.cmake files to account for that.
+
+Releases are built with `-DENABLE_GUI=OFF`. The commands below do the same. A 32-bit build would need changes in `CMakeLists.txt` and `cmake/setup_vcpkg.cmake`.
 
 ### Windows
-If you have CMake and MSVC installed, things should be fairly simple. The project has been setup for Windows so that it will automatically download and build all dependencies with vcpkg inside the project directory by configuring with CMake. This can take a while depending on your internet speed and PC specs but it's an one-time process.
 
-Clone this repo and make a build directory
+With CMake and MSVC installed, configuration downloads and builds the dependencies through the vcpkg checkout in this repository. The first configure takes a while.
 
 ```
-git clone --recursive https://github.com/ThePlayer14/XGDTool_linux.git
+git clone --recursive https://github.com/sharkusk/XGDTool.git
 cd XGDTool
-mkdir build
-cd build
-```
-
-Configure as GUI: 
-```
-cmake -S .. -B . -G "Visual Studio 17 2022" -A x64
-``` 
-or as CLI: 
-```
-cmake -S .. -B . -DENABLE_GUI=OFF -G "Visual Studio 17 2022" -A x64
-```
-
-Build
-```
-cmake --build . --config Release
+cmake -S . -B build -DENABLE_GUI=OFF -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Release
 ```
 
 ### Linux
-This app has not yet been tested extensively for Linux, Linux also has some quirks with wxWidgets so the GUI doesn't look exactly as it should. It's been tested with Clang and GCC. In addition to Clang, Make, and CMake, you'll need to install some other dependencies:
+
+Install a C++ compiler, CMake, and the libraries below. This has been built with Clang and GCC.
 
 Ubuntu / Debian
 ```
 sudo apt update
-sudo apt-get install pkg-config liblz4-dev libzstd-dev libssl-dev libcurl4-openssl-dev libwxgtk3.0-gtk3-dev
+sudo apt-get install build-essential cmake pkg-config liblz4-dev libzstd-dev libssl-dev libcurl4-openssl-dev
 ```
 
 Fedora
 ```
-sudo dnf update
-sudo dnf install pkgconf libzstd-devel lz4-devel libssl47 openssl-devel wxgtk-devel libcurl-devel
+sudo dnf install gcc-c++ cmake pkgconf libzstd-devel lz4-devel openssl-devel libcurl-devel
 ```
-Clone this repo and make a build directory
-```
-git clone --recursive https://github.com/ThePlayer14/XGDTool_linux.git
-cd XGDTool
-mkdir build
-cd build
-```
-Configure as GUI: 
-```
-cmake ..
-```
-or as CLI: 
-```
-cmake -DENABLE_GUI=OFF ..
-```
-You can also use the CMake GUI to perform configuration of the tool, and you can specify a different compiler if that's you'd like to do.
 
-Build
 ```
-make
+git clone --recursive https://github.com/sharkusk/XGDTool.git
+cd XGDTool
+cmake -S . -B build -DENABLE_GUI=OFF
+cmake --build build
 ```
-## Notes about the Linux build
-* The files / games you want to process must be on an ext4 or other linux-native filesystem. The tool will have issues with mounted NTFS volumes.
-* Since not all functions have been tested on Linux, your mileage may vary with the available options. ZAR image creation from GoD folder works nicely.
+
+### macOS
+
+```
+brew install cmake pkg-config lz4 zstd openssl
+git clone --recursive https://github.com/sharkusk/XGDTool.git
+cd XGDTool
+cmake -S . -B build -DENABLE_GUI=OFF -DOPENSSL_ROOT_DIR="$(brew --prefix openssl)"
+cmake --build build
+```
+
+## Notes
+
+* On a case-insensitive filesystem (mounted NTFS, or the default APFS volume on macOS), extraction can collide when two disc entries differ only by case. A case-sensitive volume avoids that.
+* Not every option has been tested on Linux and macOS. Creating a ZAR archive from a GoD folder works.
