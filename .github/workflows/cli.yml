@@ -68,6 +68,24 @@ jobs:
           $cache = $cache.Replace('\', '/')
           "VCPKG_BINARY_SOURCES=clear;files,$cache,readwrite" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8NoBOM
 
+      # The pinned vcpkg downloads msys2 pkgconf 2.2.0, which the mirrors no longer host.
+      # A local pkg-config makes vcpkg skip that download.
+      - name: Install Windows pkg-config
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install pkgconfiglite --no-progress -y
+          $roots = @($env:ChocolateyInstall, "$env:ProgramData\chocolatey") | Where-Object { $_ }
+          $exe = $roots | ForEach-Object { Join-Path $_ "bin\pkg-config.exe" } | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $exe) {
+            $exe = $roots | ForEach-Object { Join-Path $_ "lib\pkgconfiglite" } |
+              Where-Object { Test-Path $_ } |
+              ForEach-Object { Get-ChildItem $_ -Recurse -Filter pkg-config.exe } |
+              Select-Object -First 1 -ExpandProperty FullName
+          }
+          if (-not $exe) { throw "pkg-config.exe was not installed" }
+          "PKG_CONFIG=$($exe.Replace('\', '/'))" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8NoBOM
+
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
