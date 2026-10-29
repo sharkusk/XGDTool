@@ -6,6 +6,7 @@ Each [release](https://github.com/sharkusk/XGDTool/releases) includes a CLI bina
 
 - `XGDTool-windows` (`XGDTool.exe`)
 - `XGDTool-linux`
+- `XGDTool-x86_64.AppImage`
 - `XGDTool-macos`
 
 This fork does not build or ship the graphical interface. That program remains in the original repository.
@@ -122,3 +123,4 @@ cmake --build build
 
 * On a case-insensitive filesystem (mounted NTFS, or the default APFS volume on macOS), extraction can collide when two disc entries differ only by case. A case-sensitive volume avoids that.
 * Not every option has been tested on Linux and macOS. Creating a ZAR archive from a GoD folder works.
+* `XGDTool-x86_64.AppImage` bundles lz4, curl, and OpenSSL. Mark it executable and run `./XGDTool-x86_64.AppImage --help`. It needs glibc 2.35 or newer, which means Ubuntu 22.04 and other current distributions.

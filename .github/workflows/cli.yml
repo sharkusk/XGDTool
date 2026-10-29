@@ -22,6 +22,8 @@ jobs:
         include:
           - name: linux
             os: ubuntu-latest
+          - name: linux-appimage
+            os: ubuntu-22.04
           - name: macos
             os: macos-latest
           - name: windows
@@ -139,6 +141,31 @@ jobs:
             python3 .github/scripts/bundle_macos_dylibs.py "${bundled}"
             "${bundled}" --version
           fi
+
+      # Built on Ubuntu 22.04 so the bundled libraries ride on glibc 2.35.
+      - name: Package AppImage
+        if: matrix.name == 'linux-appimage'
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+          ARCH: x86_64
+        run: |
+          set -eu
+          sudo apt-get install -y patchelf
+          tools="$(mktemp -d)"
+          curl -fsSL -o "$tools/linuxdeploy-x86_64.AppImage" \
+            https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          curl -fsSL -o "$tools/linuxdeploy-plugin-appimage-x86_64.AppImage" \
+            https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage
+          chmod +x "$tools"/*.AppImage
+          export PATH="$tools:$PATH"
+          linuxdeploy-x86_64.AppImage --appdir AppDir \
+            --executable build/dist/XGDTool \
+            --desktop-file resources/xgdtool.desktop \
+            --icon-file resources/app_icon.png \
+            --output appimage
+          appimage="$(echo XGDTool*.AppImage)"
+          mv "$appimage" build/dist/XGDTool-x86_64.AppImage
+          ./build/dist/XGDTool-x86_64.AppImage --version
 
       - name: Upload CLI
         uses: actions/upload-artifact@v7

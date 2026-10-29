@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=XGDTool
+Exec=XGDTool
+Icon=xgdtool
+Categories=Utility;
+Terminal=true
+Comment=Convert original Xbox and Xbox 360 disc images
