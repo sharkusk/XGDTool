@@ -133,12 +133,24 @@ jobs:
           "${bin}" --help
           "${bin}" --version
           mkdir -p build/dist
-          cp "${bin}" build/dist/
-          if [ "$(uname -s)" = "Darwin" ]; then
-            bundled="build/dist/$(basename "${bin}")"
-            python3 .github/scripts/bundle_macos_dylibs.py "${bundled}"
-            "${bundled}" --version
-          fi
+          case "${RUNNER_OS}" in
+            Windows)
+              cp "${bin}" build/dist/XGDTool.exe
+              python3 .github/scripts/zip_release.py build/dist/XGDTool.exe build/dist/XGDTool-windows.zip
+              rm -f build/dist/XGDTool.exe
+              ;;
+            macOS)
+              mkdir -p build/dist/XGDTool-macos
+              cp "${bin}" build/dist/XGDTool-macos/XGDTool
+              python3 .github/scripts/bundle_macos_dylibs.py build/dist/XGDTool-macos/XGDTool
+              build/dist/XGDTool-macos/XGDTool --version
+              python3 .github/scripts/zip_release.py build/dist/XGDTool-macos build/dist/XGDTool-macos.zip
+              rm -rf build/dist/XGDTool-macos
+              ;;
+            Linux)
+              cp "${bin}" build/dist/XGDTool
+              ;;
+          esac
 
       # Built on Ubuntu 22.04 so the bundled libraries ride on glibc 2.35.
       - name: Package AppImage
@@ -180,4 +192,29 @@ jobs:
         with:
           name: XGDTool-${{ matrix.name }}
           path: build/dist/*
+          if-no-files-found: error
+
+  checksums:
+    name: checksums
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download release files
+        uses: actions/download-artifact@v7
+        with:
+          pattern: XGDTool-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Write SHA256SUMS
+        run: python3 .github/scripts/sha256sums.py artifacts SHA256SUMS
+
+      - name: Upload SHA256SUMS
+        uses: actions/upload-artifact@v7
+        with:
+          name: SHA256SUMS
+          path: SHA256SUMS
           if-no-files-found: error
