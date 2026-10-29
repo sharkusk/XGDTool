@@ -69,10 +69,16 @@ void AvlTree::generate_from_directory_entries(std::vector<Xiso::DirectoryEntry>&
                                         [&](const Xiso::DirectoryEntry& entry) 
                                         {
                                             std::string entry_path_str = entry.path.string();
-                                            if (entry_path_str.compare(0, current_path_str.length(), current_path_str) == 0 && entry_path_str != current_path_str) 
+                                            // "DJ" is a prefix of "DJ_Demo". A child path has to cross a separator.
+                                            if (entry_path_str.size() > current_path_str.size()
+                                                && entry_path_str.compare(0, current_path_str.size(), current_path_str) == 0)
                                             {
-                                                subdirectory_entries.push_back(entry);
-                                                return true;
+                                                char separator = entry_path_str[current_path_str.size()];
+                                                if (separator == '/' || separator == '\\')
+                                                {
+                                                    subdirectory_entries.push_back(entry);
+                                                    return true;
+                                                }
                                             }
                                             return false;
                                         });
