@@ -167,7 +167,7 @@ jobs:
           # Ubuntu 22.04 ships Pillow 9.0. Image.Resampling arrived in 9.1.
           resample = getattr(Image, "Resampling", Image).LANCZOS
           image = image.resize((256, 256), resample)
-          image.save("/tmp/xgdtool-256.png")
+          image.save("/tmp/xgdtool.png")
           PY
           tools="$(mktemp -d)"
           curl -fsSL -o "$tools/linuxdeploy-x86_64.AppImage" \
@@ -179,7 +179,7 @@ jobs:
           linuxdeploy-x86_64.AppImage --appdir AppDir \
             --executable build/dist/XGDTool \
             --desktop-file resources/xgdtool.desktop \
-            --icon-file /tmp/xgdtool-256.png \
+            --icon-file /tmp/xgdtool.png \
             --output appimage
           appimage="$(echo XGDTool*.AppImage)"
           mv "$appimage" build/dist/XGDTool-x86_64.AppImage
