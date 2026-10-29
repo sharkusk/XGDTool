@@ -3,9 +3,10 @@
 
 #include "ImageWriter/XisoWriter/XisoWriter.h"
 #include "AvlTree/AvlTree.h"
+#include "Utils/PathCase.h"
 
-XisoWriter::XisoWriter(std::shared_ptr<ImageReader> image_reader, ScrubType scrub_type, const bool split) 
-    : image_reader_(image_reader), scrub_type_(scrub_type), split_(split) {}
+XisoWriter::XisoWriter(std::shared_ptr<ImageReader> image_reader, ScrubType scrub_type, const bool split, const bool scrub_fallback)
+    : image_reader_(image_reader), scrub_type_(scrub_type), split_(split), scrub_fallback_(scrub_fallback) {}
 
 XisoWriter::XisoWriter(const std::filesystem::path& in_dir_path, const bool split) 
     : split_(split), in_dir_path_(in_dir_path) {}
@@ -16,6 +17,33 @@ std::vector<std::filesystem::path> XisoWriter::convert(const std::filesystem::pa
 
     if (image_reader_ && scrub_type_ == ScrubType::FULL) //Full scrub ISO
     {
+        std::vector<std::string> paths;
+        for (const auto& entry : image_reader_->directory_entries())
+        {
+            if (!entry.path.empty())
+            {
+                paths.push_back(entry.path.generic_string());
+            }
+        }
+        const std::vector<std::vector<std::string>> groups = PathCase::collisions(paths);
+        if (!groups.empty() && scrub_fallback_)
+        {
+            std::string message = "These names differ only by case, so a full scrub cannot store both:\n";
+            for (const std::vector<std::string>& group : groups)
+            {
+                for (const std::string& path : group)
+                {
+                    message += "  ";
+                    message += path;
+                    message += "\n";
+                }
+            }
+            message += "Using a partial scrub instead.";
+            XGDLog() << message << XGDLog::Endl;
+            scrub_type_ = ScrubType::PARTIAL;
+            return convert_to_xiso(out_xiso_path, true);
+        }
+
         AvlTree avl_tree(image_reader_->name(), image_reader_->directory_entries(), "an XISO");
         return convert_to_xiso_from_avl(avl_tree, out_xiso_path);
     }

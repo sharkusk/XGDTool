@@ -14,7 +14,7 @@ std::unique_ptr<ImageWriter> ImageWriter::create_instance(std::shared_ptr<ImageR
     switch (out_settings.file_type) 
     {
         case FileType::ISO:
-            return std::make_unique<XisoWriter>(image_reader, out_settings.scrub_type, out_settings.split);
+            return std::make_unique<XisoWriter>(image_reader, out_settings.scrub_type, out_settings.split, out_settings.scrub_fallback);
         case FileType::ZAR:
             return std::make_unique<ZARWriter>(image_reader);
         case FileType::GoD:

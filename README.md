@@ -42,7 +42,7 @@ On Windows the program is `XGDTool.exe`. On Linux and macOS it is `XGDTool`.
 XGDTool <output_format> <settings_flags> <input_path> <output_directory>
 ```
 
-Settings flags and output directory are optional. The output format is optional too. With no format flag, an original Xbox game is written beside the input as `Name.xiso.iso` (scrubbed, not compressed) and an Xbox 360 game, including XBLA and a `.zip` of a supported input, as `Name.zar`. The name is the source filename. An output directory, when given, receives those files directly. Explicit format flags still override that default and keep their own filenames. `--xenia` remains a scrubbed XISO, and `--xbox360` remains Games on Demand.
+Settings flags and output directory are optional. The output format is optional too. With no format flag, an original Xbox game is written beside the input as `Name.xiso.iso` (a full scrub, not compressed) and an Xbox 360 game, including XBLA and a `.zip` of a supported input, as `Name.zar`. The name is the source filename. An output directory, when given, receives those files directly. If two names in that automatic XISO differ only by case, the tool uses a partial scrub instead, so both names are kept. `--xemu` and `--xenia` do the same. An explicit `--full-scrub` still stops. Explicit format flags still override that default and keep their own filenames. `--xbox360` remains Games on Demand.
 
 A ZAR input has no default format. Pass one, such as `--xiso`, to rebuild an image from the archived files. The file bytes are kept. The new ISO is a fresh disc layout, so it will not match the original image byte for byte. An XBLA ZAR was never a disc; Xenia still wants the ZAR or the extracted files.
 
@@ -125,7 +125,7 @@ cmake --build build
 
 ## Notes
 
-* If two names differ only by case, extraction stops before writing them when the output volume is case-insensitive. A rebuilt image, including a scrubbed XISO, and a ZAR also stop, because those formats cannot store both names. A case-sensitive volume can hold both names when the output is a directory.
+* If two names differ only by case, extraction stops before writing them when the output volume is case-insensitive. A ZAR, and an explicit full scrub, also stop, because those formats cannot store both names. An automatic XISO switches to a partial scrub instead. A case-sensitive volume can hold both names when the output is a directory.
 * While a single XISO part is still open it is named `Name.1.iso`, or `Name.xiso.1.iso` for the default name. The `.1` is removed when the write finishes.
 * Not every option has been tested on Linux and macOS. Creating a ZAR archive from a GoD folder works.
 * Linux downloads are a `.deb` and an AppImage. Install the package with `sudo apt install ./xgdtool_*_amd64.deb`. It uses the distribution's lz4, curl, and OpenSSL, and needs glibc 2.35 or newer. The AppImage bundles those libraries. Mark it executable and run `./XGDTool-x86_64.AppImage --help`.

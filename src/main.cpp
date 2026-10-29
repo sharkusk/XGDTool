@@ -19,7 +19,7 @@ int main(int argc, char** argv)
     OutputSettings output_settings;
     AutoFormat auto_format = AutoFormat::NONE;
 
-    auto* output_format_group = app.add_option_group("Output Format", "Optional. With no format, an original Xbox game is written beside the input as Name.xiso.iso and an Xbox 360 game as Name.zar.");
+    auto* output_format_group = app.add_option_group("Output Format", "Optional. With no format, an original Xbox game is written beside the input as Name.xiso.iso (full scrub, or partial scrub when two names differ only by case) and an Xbox 360 game as Name.zar.");
     output_format_group->require_option(0, 1);
 
     output_format_group->add_flag_function("--extract",  [&](int64_t) { output_settings.file_type = FileType::DIR; }, "Extracts all files to a directory");

@@ -239,6 +239,7 @@ OutputSettings InputHelper::get_auto_output_settings(const AutoFormat auto_forma
         case AutoFormat::XEMU:
             output_settings.file_type = FileType::ISO;
             output_settings.scrub_type = ScrubType::FULL;
+            output_settings.scrub_fallback = true;
             output_settings.attach_xbe = false;
             output_settings.allowed_media_patch = false;
             output_settings.split = false;

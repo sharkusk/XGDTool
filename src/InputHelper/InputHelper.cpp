@@ -524,8 +524,10 @@ void InputHelper::infer_default_output(const InputInfo& input_info)
         if (output_settings_.scrub_type == ScrubType::NONE)
         {
             output_settings_.scrub_type = ScrubType::FULL;
+            output_settings_.scrub_fallback = true;
         }
-        XGDLog() << "Default output: scrubbed XISO" << XGDLog::Endl;
+        const char* scrub_name = output_settings_.scrub_type == ScrubType::PARTIAL ? "partial-scrub" : "full-scrub";
+        XGDLog() << "Default output: " << scrub_name << " XISO" << XGDLog::Endl;
         return;
     }
 

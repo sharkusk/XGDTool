@@ -23,6 +23,8 @@ struct OutputSettings
     bool xemu_paths{false};
     // Bare filename: write beside the source as Name.xiso.iso or Name.zar.
     bool source_name{false};
+    // The tool chose full scrub. A case-only name clash may use a partial scrub instead.
+    bool scrub_fallback{false};
 };
 
 #endif // _IHTYPES_H_
