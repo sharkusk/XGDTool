@@ -20,6 +20,10 @@ public:
     {
         FileType file_type;
         std::vector<std::filesystem::path> paths;
+        // Folder or archive name used when an XBLA package is extracted.
+        std::filesystem::path name_hint;
+        // Path the user passed, used for the default output filename.
+        std::filesystem::path source_path;
     };
 
     InputHelper(std::filesystem::path in_path, std::filesystem::path out_directory, OutputSettings output_settings);
@@ -41,7 +45,10 @@ private:
     std::vector<InputInfo> input_infos_;
     OutputSettings output_settings_;
     std::filesystem::path output_directory_;
+    bool output_directory_specified_{false};
+    std::filesystem::path naming_source_;
     std::vector<std::filesystem::path> failed_inputs_;
+    std::vector<std::filesystem::path> temp_directories_;
 
     // Instances stored here so cancel flag can be set asynchrnously
     std::unique_ptr<ImageWriter> image_writer_{nullptr};
@@ -54,19 +61,22 @@ private:
     void list_files(const InputInfo& input_info);
     std::filesystem::path extract_temp_zar(const std::filesystem::path& in_path);
     
-    void add_input(const std::filesystem::path& in_path);
+    void add_input(const std::filesystem::path& in_path, bool top_level = false);
+    void push_input(FileType file_type, const std::filesystem::path& path);
+    void infer_default_output(const InputInfo& input_info);
+    Platform platform_of(const InputInfo& input_info);
+    bool uses_source_destination() const;
     bool has_extension(const std::filesystem::path& path, const std::string& extension);
     bool is_extracted_dir(const std::filesystem::path& path);
     bool is_god_dir_helper(const std::filesystem::path& path, int current_depth, int max_depth);
     bool is_god_dir(const std::filesystem::path& path);
-    bool is_batch_dir(const std::filesystem::path& path);
     bool is_part_2_file(const std::filesystem::path& path);
     FileType get_filetype(const std::filesystem::path& path);
 
     void remove_duplicate_infos(std::vector<InputInfo>& input_infos);
     OutputSettings get_auto_output_settings(const AutoFormat auto_format);
     std::vector<std::filesystem::path> find_split_filepaths(const std::filesystem::path& in_filepath);
-    std::filesystem::path get_output_path(const std::filesystem::path& out_directory, TitleHelper& title_helper);
+    std::filesystem::path get_output_path(const std::filesystem::path& out_directory, TitleHelper& title_helper, const InputInfo& input_info);
     void reset_processor();
 };
 

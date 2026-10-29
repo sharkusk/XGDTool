@@ -22,7 +22,8 @@ This program is still in initial testing. Report issues in this repository's Iss
     - CCI
     - CSO
     - ZAR
-- Seamless conversion, e.g. you can directly extract a GoD image, convert an ISO to ZAR archive, or extracted directory to CCI archive, without writing any temporary files. The only format requiring temporary files is ZAR when provided as input.
+    - XBLA (LIVE, PIRS, or CON), including a folder that contains one package
+- Convert between those formats directly. For example, extract a GoD image, convert an ISO to a ZAR, or turn an extracted directory into a CCI archive. A ZAR, an XBLA package, or a `.zip` of a supported input is unpacked to a temporary directory and removed when the conversion finishes. Other inputs are read in place.
 - Image scrubbing ("Partial Scrub"), gets rid of random padding and trims the output file to the shortest length possible.
 - Image reauthoring ("Full Scrub"), completely rewrites the structure of the disc for the smallest possible output file.
 - Image authoring, takes your extracted files and creates a new image with them.
@@ -31,7 +32,7 @@ This program is still in initial testing. Report issues in this repository's Iss
 - Automatically finds split files when only one part is provided as an input path, assuming they're named in this format: ```name.1.extension``` ```name.2.extension```.
 - Option to select your target app/machine (Xemu, Xenia, OG Xbox, Xbox 360) and let XGDTool decide which settings to use.
 - Attach XBE generation for OG Xbox.
-- Online database lookup for accurate file naming (can be disabled).
+- Online database lookup for accurate file naming (can be disabled with `--offline`). If the lookup fails, the source filename is used and the conversion continues.
 
 ## CLI Usage
 
@@ -41,7 +42,9 @@ On Windows the program is `XGDTool.exe`. On Linux and macOS it is `XGDTool`.
 XGDTool <output_format> <settings_flags> <input_path> <output_directory>
 ```
 
-Settings flags and output directory are optional.
+Settings flags and output directory are optional. The output format is optional too. With no format flag, an original Xbox game is written beside the input as `Name.xiso.iso` (scrubbed, not compressed) and an Xbox 360 game, including XBLA and a `.zip` of a supported input, as `Name.zar`. The name is the source filename. An output directory, when given, receives those files directly. Explicit format flags still override that default and keep their own filenames. `--xenia` remains a scrubbed XISO, and `--xbox360` remains Games on Demand.
+
+A ZAR input has no default format. Pass one, such as `--xiso`, to rebuild an image from the archived files. The file bytes are kept. The new ISO is a fresh disc layout, so it will not match the original image byte for byte. An XBLA ZAR was never a disc; Xenia still wants the ZAR or the extracted files.
 
 ### Output format arguments (mutually exclusive)
 - ```--extract```   Extracts all files to a directory
@@ -95,12 +98,12 @@ Install a C++ compiler, CMake, and the libraries below. This has been built with
 Ubuntu / Debian
 ```
 sudo apt update
-sudo apt-get install build-essential cmake pkg-config liblz4-dev libzstd-dev libssl-dev libcurl4-openssl-dev
+sudo apt-get install build-essential cmake pkg-config liblz4-dev libzstd-dev libssl-dev libcurl4-openssl-dev zlib1g-dev
 ```
 
 Fedora
 ```
-sudo dnf install gcc-c++ cmake pkgconf libzstd-devel lz4-devel openssl-devel libcurl-devel
+sudo dnf install gcc-c++ cmake pkgconf libzstd-devel lz4-devel openssl-devel libcurl-devel zlib-devel
 ```
 
 ```
@@ -123,6 +126,7 @@ cmake --build build
 ## Notes
 
 * On a case-insensitive filesystem (mounted NTFS, or the default APFS volume on macOS), extraction can collide when two disc entries differ only by case. A case-sensitive volume avoids that.
+* While a single XISO part is still open it is named `Name.1.iso`, or `Name.xiso.1.iso` for the default name. The `.1` is removed when the write finishes.
 * Not every option has been tested on Linux and macOS. Creating a ZAR archive from a GoD folder works.
 * Linux downloads are a `.deb` and an AppImage. Install the package with `sudo apt install ./xgdtool_*_amd64.deb`. It uses the distribution's lz4, curl, and OpenSSL, and needs glibc 2.35 or newer. The AppImage bundles those libraries. Mark it executable and run `./XGDTool-x86_64.AppImage --help`.
 * `XGDTool-windows.zip` contains `XGDTool.exe`. `XGDTool-macos.zip` contains the program and the libraries it loads. Unzip either archive and keep those files together.

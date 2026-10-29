@@ -6,7 +6,7 @@
 #include "XGDLog.h"
 
 enum class Platform { UNKNOWN, OGX, X360 };
-enum class FileType { UNKNOWN, CCI, CSO, ISO, ZAR, DIR, GoD, XBE, LIST };
+enum class FileType { UNKNOWN, CCI, CSO, ISO, ZAR, DIR, GoD, XBE, LIST, XBLA };
 enum class ScrubType { NONE, PARTIAL, FULL };
 enum class AutoFormat { NONE, OGXBOX, XBOX360, XEMU, XENIA };
 
@@ -21,6 +21,8 @@ struct OutputSettings
     bool offline_mode{false};
     bool rename_xbe{false};
     bool xemu_paths{false};
+    // Bare filename: write beside the source as Name.xiso.iso or Name.zar.
+    bool source_name{false};
 };
 
 #endif // _IHTYPES_H_

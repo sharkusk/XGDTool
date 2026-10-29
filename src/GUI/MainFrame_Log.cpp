@@ -26,6 +26,7 @@ const char* MainFrame::file_type_to_string(FileType type)
         case FileType::GoD: return "GoD";
         case FileType::XBE: return "XBE";
         case FileType::LIST: return "LIST";
+        case FileType::XBLA: return "XBLA";
         default: return "UNKNOWN";
     }
 }

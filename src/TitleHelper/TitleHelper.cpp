@@ -63,16 +63,24 @@ void TitleHelper::initialize()
 
     if (!offline_mode_ && internet_connected()) 
     {
-        switch (platform_) 
+        try
         {
-            case Platform::X360:
-                initialized = set_x360_titles_online(*exe_tool);
-                break;
-            case Platform::OGX:
-                initialized = set_ogx_titles_online(*exe_tool);
-                break;
-            default:
-                throw XGDException(ErrCode::MISC, HERE(), "Invalid platform.");
+            switch (platform_) 
+            {
+                case Platform::X360:
+                    initialized = set_x360_titles_online(*exe_tool);
+                    break;
+                case Platform::OGX:
+                    initialized = set_ogx_titles_online(*exe_tool);
+                    break;
+                default:
+                    throw XGDException(ErrCode::MISC, HERE(), "Invalid platform.");
+            }
+        }
+        catch (const nlohmann::json::exception&)
+        {
+            XGDLog(Error) << "Failed to get title name online." << XGDLog::Endl;
+            initialized = false;
         }
     } 
 
@@ -129,27 +137,38 @@ bool TitleHelper::set_ogx_titles_online(ExeTool& exe_tool)
     {
         CURLcode res;
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, rpk_write_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &json_string);
 
         res = curl_easy_perform(curl);
 
-        if (res != CURLE_OK) 
+        long http_code = 0;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+        curl_easy_cleanup(curl);
+
+        if (res != CURLE_OK || http_code != 200) 
         {
-            std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
-            curl_easy_cleanup(curl);
+            XGDLog(Error) << "Failed to get title name from Repackinator." << XGDLog::Endl;
             return false;
         }
-
-        curl_easy_cleanup(curl);
     } 
     else 
     {
-        std::cerr << "Failed to initialize CURL" << std::endl;
+        XGDLog(Error) << "Failed to get title name from Repackinator." << XGDLog::Endl;
         return false;
     }
 
-    nlohmann::json json = nlohmann::json::parse(json_string);
+    nlohmann::json json;
+    try
+    {
+        json = nlohmann::json::parse(json_string);
+    }
+    catch (const nlohmann::json::exception&)
+    {
+        XGDLog(Error) << "Failed to get title name from Repackinator." << XGDLog::Endl;
+        return false;
+    }
 
     std::stringstream title_id_ss;
     title_id_ss << std::hex << std::setw(8) << std::setfill('0') << std::uppercase << exe_tool.xbe_cert().title_id;
@@ -226,10 +245,13 @@ bool TitleHelper::set_ogx_titles_online(ExeTool& exe_tool)
         return false;
     }
 
-    size_t cut_len = sizeof(" (RGN)") - 1;
-    if (title_name_.size() > cut_len) 
+    if (!title_name_.empty() && title_name_.back() == ')')
     {
-        title_name_ = title_name_.substr(0, title_name_.size() - cut_len);
+        size_t region_pos = title_name_.rfind(" (");
+        if (region_pos != std::string::npos)
+        {
+            title_name_ = title_name_.substr(0, region_pos);
+        }
     }
 
     utf16_title_name_ = StringUtils::utf8_to_utf16(title_name_);
@@ -342,14 +364,23 @@ std::string TitleHelper::unity_query(const std::string& title_id)
         std::string url = UNITY_URL_PREFIX + title_id;
 
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, unity_write_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
 
         res = curl_easy_perform(curl);
 
+        long http_code = 0;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+
         if (res != CURLE_OK) 
         {
             XGDLog(Error) << "curl_easy_perform() failed: " << curl_easy_strerror(res) << XGDLog::Endl;
+            readBuffer.clear();
+        }
+        else if (http_code != 200)
+        {
+            readBuffer.clear();
         }
 
         curl_easy_cleanup(curl);
@@ -360,16 +391,23 @@ std::string TitleHelper::unity_query(const std::string& title_id)
 
 std::string TitleHelper::unity_parse_json(const std::string& json_response) 
 {
-    auto json = nlohmann::json::parse(json_response);
-
-    if (json.contains("MediaIDS") && !json["MediaIDS"].empty()) 
+    try
     {
-        auto updates = json["MediaIDS"][0]["Updates"];
+        auto json = nlohmann::json::parse(json_response);
 
-        if (!updates.empty() && updates[0].contains("Name")) 
+        if (json.contains("MediaIDS") && !json["MediaIDS"].empty()) 
         {
-            return updates[0]["Name"].get<std::string>();
+            auto updates = json["MediaIDS"][0]["Updates"];
+
+            if (!updates.empty() && updates[0].contains("Name")) 
+            {
+                return updates[0]["Name"].get<std::string>();
+            }
         }
+    }
+    catch (const nlohmann::json::exception&)
+    {
+        return "Error";
     }
     return "Error";
 }

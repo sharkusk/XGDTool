@@ -2,6 +2,7 @@
 
 #include "Utils/StringUtils.h"
 #include "InputHelper/InputHelper.h"
+#include "Stfs/StfsReader.h"
 
 bool InputHelper::has_extension(const std::filesystem::path& path, const std::string& extension) 
 {
@@ -83,6 +84,10 @@ FileType InputHelper::get_filetype(const std::filesystem::path& path)
         {
             return FileType::GoD;
         }
+        else if (StfsReader::find_packages(path, 6).size() == 1)
+        {
+            return FileType::XBLA;
+        }
     }
     else if (std::filesystem::is_regular_file(path))
     {
@@ -106,20 +111,12 @@ FileType InputHelper::get_filetype(const std::filesystem::path& path)
         {
             return FileType::XBE;
         }
-    }
-    return FileType::UNKNOWN;
-}
-
-bool InputHelper::is_batch_dir(const std::filesystem::path& path) 
-{
-    for (const auto& entry : std::filesystem::directory_iterator(path)) 
-    {
-        if (get_filetype(entry.path()) != FileType::UNKNOWN) 
+        else if (StfsReader::is_package(path))
         {
-            return true;
+            return FileType::XBLA;
         }
     }
-    return false;
+    return FileType::UNKNOWN;
 }
 
 std::vector<std::filesystem::path> InputHelper::find_split_filepaths(const std::filesystem::path& in_filepath) 
@@ -174,8 +171,18 @@ bool InputHelper::is_part_2_file(const std::filesystem::path& path)
     return false;
 }
 
-std::filesystem::path InputHelper::get_output_path(const std::filesystem::path& out_directory, TitleHelper& title_helper)
+std::filesystem::path InputHelper::get_output_path(const std::filesystem::path& out_directory, TitleHelper& title_helper, const InputInfo& input_info)
 {
+    if (output_settings_.source_name && (output_settings_.file_type == FileType::ISO || output_settings_.file_type == FileType::ZAR))
+    {
+        const std::filesystem::path& source = input_info.source_path.empty() ? input_info.paths.front() : input_info.source_path;
+        std::filesystem::path directory = output_directory_specified_ ? out_directory : source.parent_path();
+        std::error_code error;
+        std::string base = std::filesystem::is_directory(source, error) ? source.filename().string() : source.stem().string();
+        std::string extension = output_settings_.file_type == FileType::ISO ? ".xiso.iso" : ".zar";
+        return directory / (base + extension);
+    }
+
     std::filesystem::path out_path = out_directory;
 
     switch (output_settings_.file_type)
@@ -246,6 +253,11 @@ OutputSettings InputHelper::get_auto_output_settings(const AutoFormat auto_forma
 
 void InputHelper::remove_duplicate_infos(std::vector<InputInfo>& input_infos)
 {
+    if (input_infos.size() < 2)
+    {
+        return;
+    }
+
     std::sort(input_infos.begin(), input_infos.end(), [](const InputInfo& a, const InputInfo& b) 
     {
         return a.paths.front() < b.paths.front();

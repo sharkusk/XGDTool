@@ -1,42 +1,149 @@
 #include "ImageReader/ImageReader.h"
 #include "InputHelper/InputHelper.h"
 #include "Executable/AttachXbeTool.h"
+#include "Stfs/StfsReader.h"
+#include "Zip/ZipArchive.h"
+
+namespace {
+
+struct TempCleanup
+{
+    std::filesystem::path path;
+    ~TempCleanup()
+    {
+        if (path.empty())
+        {
+            return;
+        }
+        std::error_code error;
+        std::filesystem::remove_all(path, error);
+        if (path.has_parent_path() && path.parent_path().filename() == "_temp")
+        {
+            std::filesystem::remove(path.parent_path(), error);
+        }
+    }
+};
+
+}
 
 InputHelper::InputHelper(std::filesystem::path in_path, std::filesystem::path out_directory, OutputSettings output_settings)
     :   output_directory_(out_directory), 
-        output_settings_((output_settings.auto_format != AutoFormat::NONE) ? get_auto_output_settings(output_settings.auto_format) : output_settings)
+        output_settings_((output_settings.auto_format != AutoFormat::NONE) ? get_auto_output_settings(output_settings.auto_format) : output_settings),
+        output_directory_specified_(!out_directory.empty())
 {
-    add_input(in_path);
-
-    if (output_directory_.empty()) 
+    if (!output_directory_specified_ && !uses_source_destination())
     {
         output_directory_ = in_path.parent_path() / "XGDTool_Output";
     }
 
-    output_directory_ = std::filesystem::absolute(output_directory_);
+    if (!output_directory_.empty())
+    {
+        output_directory_ = std::filesystem::absolute(output_directory_);
+    }
+    add_input(in_path, true);
 }
 
 InputHelper::InputHelper(std::vector<std::filesystem::path> in_paths, std::filesystem::path out_directory, OutputSettings output_settings)
     :   output_directory_(out_directory), 
-        output_settings_((output_settings.auto_format != AutoFormat::NONE) ? get_auto_output_settings(output_settings.auto_format) : output_settings)
+        output_settings_((output_settings.auto_format != AutoFormat::NONE) ? get_auto_output_settings(output_settings.auto_format) : output_settings),
+        output_directory_specified_(!out_directory.empty())
 {
-    for (const auto& in_path : in_paths) 
-    {
-        add_input(in_path);
-    }
-
-    if (output_directory_.empty()) 
+    if (!output_directory_specified_ && !uses_source_destination())
     {
         output_directory_ = in_paths.front().parent_path() / "XGDTool_Output";
     }
 
-    output_directory_ = std::filesystem::absolute(output_directory_);
+    if (!output_directory_.empty())
+    {
+        output_directory_ = std::filesystem::absolute(output_directory_);
+    }
+
+    for (const auto& in_path : in_paths) 
+    {
+        add_input(in_path, true);
+    }
 }
 
-void InputHelper::add_input(const std::filesystem::path& in_path) 
+void InputHelper::push_input(FileType file_type, const std::filesystem::path& path)
+{
+    InputInfo info;
+    info.file_type = file_type;
+
+    if (file_type == FileType::XBLA && std::filesystem::is_directory(path))
+    {
+        std::vector<std::filesystem::path> packages = StfsReader::find_packages(path, 6);
+        if (packages.size() != 1)
+        {
+            return;
+        }
+        info.paths = { packages.front() };
+        info.name_hint = path.filename();
+    }
+    else if (std::filesystem::is_regular_file(path))
+    {
+        info.paths = find_split_filepaths(path);
+        if (file_type == FileType::XBLA)
+        {
+            info.name_hint = path.stem();
+        }
+    }
+    else
+    {
+        info.paths = { path };
+    }
+
+    info.source_path = naming_source_.empty() ? path : naming_source_;
+    input_infos_.push_back(std::move(info));
+}
+
+bool InputHelper::uses_source_destination() const
+{
+    return output_settings_.auto_format == AutoFormat::NONE && output_settings_.file_type == FileType::UNKNOWN;
+}
+
+void InputHelper::add_input(const std::filesystem::path& in_path, bool top_level) 
 {
     if (in_path.empty() || !std::filesystem::exists(in_path)) 
     {
+        return;
+    }
+
+    if (top_level && !output_directory_specified_ && output_directory_.empty())
+    {
+        FileType type = get_filetype(in_path);
+        bool batch = std::filesystem::is_directory(in_path) && type == FileType::UNKNOWN;
+        output_directory_ = std::filesystem::absolute(batch ? in_path : in_path.parent_path());
+    }
+
+    if (std::filesystem::is_regular_file(in_path) && ZipArchive::is_zip(in_path))
+    {
+        std::filesystem::path saved_naming = naming_source_;
+        if (naming_source_.empty())
+        {
+            naming_source_ = in_path;
+        }
+
+        std::filesystem::path dest = output_directory_ / "_zip" / in_path.stem();
+        int suffix = 2;
+        while (std::filesystem::exists(dest))
+        {
+            dest = output_directory_ / "_zip" / (in_path.stem().string() + "-" + std::to_string(suffix));
+            ++suffix;
+        }
+
+        try
+        {
+            std::filesystem::create_directories(dest);
+        }
+        catch (const std::filesystem::filesystem_error& error)
+        {
+            throw XGDException(ErrCode::FS_MKDIR, HERE(), error.what());
+        }
+
+        ZipArchive::extract(in_path, dest);
+        temp_directories_.push_back(dest);
+        add_input(dest);
+        naming_source_ = saved_naming;
         return;
     }
 
@@ -44,38 +151,45 @@ void InputHelper::add_input(const std::filesystem::path& in_path)
 
     if (in_file_type == FileType::UNKNOWN) 
     {
-        if (!is_batch_dir(in_path)) 
+        if (!std::filesystem::is_directory(in_path))
         {
             return;
         }
 
+        bool added = false;
         for (const auto& entry : std::filesystem::directory_iterator(in_path)) 
         {
-            if ((in_file_type = get_filetype(entry.path())) != FileType::UNKNOWN) 
+            if (entry.is_regular_file() && ZipArchive::is_zip(entry.path()))
             {
-                if (entry.is_regular_file() && !is_part_2_file(entry.path()))
-                {
-                    input_infos_.push_back({ in_file_type, find_split_filepaths(entry.path()) });
-                }
-                else if (entry.is_directory())
-                {
-                    input_infos_.push_back({ in_file_type, { entry.path() } });
-                }
+                add_input(entry.path());
+                added = true;
+                continue;
+            }
+
+            FileType child_type = get_filetype(entry.path());
+            if (child_type == FileType::UNKNOWN)
+            {
+                continue;
+            }
+            if (entry.is_regular_file() && !is_part_2_file(entry.path()))
+            {
+                push_input(child_type, entry.path());
+                added = true;
+            }
+            else if (entry.is_directory())
+            {
+                push_input(child_type, entry.path());
+                added = true;
             }
         }
-    }
-    else 
-    {
-        if (std::filesystem::is_regular_file(in_path)) 
+        if (added)
         {
-            input_infos_.push_back({ in_file_type, find_split_filepaths(in_path) });
-        } 
-        else if (std::filesystem::is_directory(in_path))
-        {
-            input_infos_.push_back({ in_file_type, { in_path } });
+            remove_duplicate_infos(input_infos_);
         }
+        return;
     }
 
+    push_input(in_file_type, in_path);
     remove_duplicate_infos(input_infos_);
 }
 
@@ -87,12 +201,30 @@ void InputHelper::process_all()
     {
         process_single(input_info);
     }
+
+    for (const auto& temp_directory : temp_directories_)
+    {
+        std::error_code error;
+        std::filesystem::remove_all(temp_directory, error);
+        if (temp_directory.has_parent_path() && temp_directory.parent_path().filename() == "_zip")
+        {
+            std::filesystem::remove(temp_directory.parent_path(), error);
+        }
+    }
+    temp_directories_.clear();
 }
 
 void InputHelper::process_single(InputInfo input_info)
 {
+    OutputSettings saved_settings = output_settings_;
+
     try 
     {
+        if (output_settings_.auto_format == AutoFormat::NONE && output_settings_.file_type == FileType::UNKNOWN)
+        {
+            infer_default_output(input_info);
+        }
+
         XGDLog() << "Processing: " << input_info.paths.front().string() + ((input_info.paths.size() > 1) ? (" and " + input_info.paths.back().string()) : "") << "\n";
         
         std::vector<std::filesystem::path> out_paths;
@@ -132,16 +264,35 @@ void InputHelper::process_single(InputInfo input_info)
         failed_inputs_.insert(failed_inputs_.end(), input_info.paths.begin(), input_info.paths.end());
         XGDLog(Error) << e.what() << "\n";
     }
+
+    output_settings_ = saved_settings;
 }
 
 std::vector<std::filesystem::path> InputHelper::create_image(InputInfo& input_info)
 {
-    std::filesystem::path temp_path;
+    TempCleanup cleanup;
 
     if (input_info.file_type == FileType::ZAR) 
     {
-        temp_path = extract_temp_zar(input_info.paths.front());
-        input_info.paths = { temp_path };
+        cleanup.path = extract_temp_zar(input_info.paths.front());
+        input_info.paths = { cleanup.path };
+        input_info.file_type = FileType::DIR;
+    }
+    else if (input_info.file_type == FileType::XBLA)
+    {
+        std::filesystem::path hint = input_info.name_hint.empty() ? input_info.paths.front().stem() : input_info.name_hint;
+        cleanup.path = output_directory_ / "_temp" / hint;
+        try
+        {
+            std::filesystem::create_directories(cleanup.path);
+        }
+        catch (const std::filesystem::filesystem_error& error)
+        {
+            throw XGDException(ErrCode::FS_MKDIR, HERE(), error.what());
+        }
+        StfsReader reader(input_info.paths.front());
+        reader.extract(cleanup.path);
+        input_info.paths = { cleanup.path };
         input_info.file_type = FileType::DIR;
     }
     else if (input_info.file_type == FileType::XBE)
@@ -163,7 +314,7 @@ std::vector<std::filesystem::path> InputHelper::create_image(InputInfo& input_in
             break;
     }
 
-    std::filesystem::path out_path = get_output_path(output_directory_, *title_helper);
+    std::filesystem::path out_path = get_output_path(output_directory_, *title_helper, input_info);
 
     switch (input_info.file_type) 
     {
@@ -178,18 +329,6 @@ std::vector<std::filesystem::path> InputHelper::create_image(InputInfo& input_in
     std::vector<std::filesystem::path> final_out_paths = image_writer_->convert(out_path);
     
     reset_processor();
-
-    if (!temp_path.empty()) 
-    {
-        try
-        {
-            std::filesystem::remove_all(temp_path);
-        }
-        catch (const std::filesystem::filesystem_error& e)
-        {
-            throw XGDException(ErrCode::FS_REMOVE, HERE(), e.what());
-        }
-    }
 
     if (output_settings_.attach_xbe && title_helper->platform() == Platform::OGX)
     {
@@ -217,12 +356,20 @@ std::vector<std::filesystem::path> InputHelper::create_dir(const InputInfo& inpu
         reset_processor();
         return { output_directory_ / input_info.paths.front().stem() };
     }
+    else if (input_info.file_type == FileType::XBLA)
+    {
+        std::filesystem::path name = input_info.name_hint.empty() ? input_info.paths.front().stem() : input_info.name_hint;
+        std::filesystem::path out_path = output_directory_ / name;
+        StfsReader reader(input_info.paths.front());
+        reader.extract(out_path);
+        return { out_path };
+    }
 
     std::shared_ptr<ImageReader> image_reader = ImageReader::create_instance(input_info.file_type, input_info.paths);
 
     TitleHelper title_helper(image_reader, output_settings_.offline_mode);
 
-    std::filesystem::path out_path = get_output_path(output_directory_, title_helper);
+    std::filesystem::path out_path = get_output_path(output_directory_, title_helper, input_info);
 
     image_extractor_ = std::make_unique<ImageExtractor>(*image_reader, title_helper, output_settings_.allowed_media_patch, output_settings_.rename_xbe);
     image_extractor_->extract(out_path);
@@ -233,7 +380,7 @@ std::vector<std::filesystem::path> InputHelper::create_dir(const InputInfo& inpu
 
 std::vector<std::filesystem::path> InputHelper::create_attach_xbe(const InputInfo& input_info)
 {
-    if (input_info.file_type == FileType::DIR || input_info.file_type == FileType::ZAR || input_info.file_type == FileType::XBE)
+    if (input_info.file_type == FileType::DIR || input_info.file_type == FileType::ZAR || input_info.file_type == FileType::XBE || input_info.file_type == FileType::XBLA)
     {
         throw XGDException(ErrCode::ISO_INVALID, HERE(), "Cannot create attach XBE from input type");
     }
@@ -247,7 +394,7 @@ std::vector<std::filesystem::path> InputHelper::create_attach_xbe(const InputInf
 
     TitleHelper title_helper(image_reader, output_settings_.offline_mode);
 
-    std::filesystem::path out_path = get_output_path(input_info.paths.front().parent_path(), title_helper);
+    std::filesystem::path out_path = get_output_path(input_info.paths.front().parent_path(), title_helper, input_info);
 
     AttachXbeTool attach_xbe_tool(title_helper); 
     attach_xbe_tool.generate_attach_xbe(out_path);
@@ -268,6 +415,13 @@ void InputHelper::list_files(const InputInfo& input_info)
     {
         ZARExtractor zar_extractor(input_info.paths.front());
         zar_extractor.list_files();
+        return;
+    }
+
+    if (input_info.file_type == FileType::XBLA)
+    {
+        StfsReader reader(input_info.paths.front());
+        reader.list();
         return;
     }
 
@@ -348,6 +502,85 @@ void InputHelper::resume_processing()
     if (zar_extractor_) 
     {
         zar_extractor_->resume_processing();
+    }
+}
+
+void InputHelper::infer_default_output(const InputInfo& input_info)
+{
+    Platform platform = platform_of(input_info);
+
+    if (platform == Platform::X360)
+    {
+        output_settings_.file_type = FileType::ZAR;
+        output_settings_.source_name = true;
+        XGDLog() << "Default output: ZAR" << XGDLog::Endl;
+        return;
+    }
+
+    if (platform == Platform::OGX)
+    {
+        output_settings_.file_type = FileType::ISO;
+        output_settings_.source_name = true;
+        if (output_settings_.scrub_type == ScrubType::NONE)
+        {
+            output_settings_.scrub_type = ScrubType::FULL;
+        }
+        XGDLog() << "Default output: scrubbed XISO" << XGDLog::Endl;
+        return;
+    }
+
+    throw XGDException(ErrCode::ISO_INVALID, HERE(), "Cannot choose an output format for this input");
+}
+
+Platform InputHelper::platform_of(const InputInfo& input_info)
+{
+    switch (input_info.file_type)
+    {
+        case FileType::XBLA:
+        case FileType::GoD:
+            return Platform::X360;
+        case FileType::XBE:
+            throw XGDException(ErrCode::ISO_INVALID, HERE(), "Cannot create an image from an XBE file");
+        case FileType::ZAR:
+            throw XGDException(ErrCode::ISO_INVALID, HERE(), "Pass an output format for a ZAR input");
+        case FileType::DIR:
+        {
+            bool found_xex = false;
+            bool found_xbe = false;
+            for (const auto& entry : std::filesystem::directory_iterator(input_info.paths.front()))
+            {
+                if (!entry.is_regular_file())
+                {
+                    continue;
+                }
+                if (has_extension(entry.path(), ".xex"))
+                {
+                    found_xex = true;
+                }
+                else if (has_extension(entry.path(), ".xbe"))
+                {
+                    found_xbe = true;
+                }
+            }
+            if (found_xex)
+            {
+                return Platform::X360;
+            }
+            if (found_xbe)
+            {
+                return Platform::OGX;
+            }
+            throw XGDException(ErrCode::MISC, HERE(), "Unknown platform");
+        }
+        case FileType::ISO:
+        case FileType::CCI:
+        case FileType::CSO:
+        {
+            std::shared_ptr<ImageReader> image_reader = ImageReader::create_instance(input_info.file_type, input_info.paths);
+            return image_reader->platform();
+        }
+        default:
+            throw XGDException(ErrCode::ISO_INVALID, HERE(), "Cannot choose an output format for this input");
     }
 }
 

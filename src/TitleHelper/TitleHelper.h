@@ -34,7 +34,7 @@ public:
     const Xbe::Cert& xbe_cert() { return xbe_cert_; };
 
 private:
-    const std::string REPACK_LIST_URL = "https://raw.githubusercontent.com/Team-Resurgent/Repackinator/main/RepackList.json";
+    const std::string REPACK_LIST_URL = "https://raw.githubusercontent.com/Team-Resurgent/Repackinator/main/Repackinator.Core/Resources/RepackList.json";
     const std::string UNITY_URL_PREFIX = "http://xboxunity.net/Resources/Lib/TitleUpdateInfo.php?titleid=";
 
     bool offline_mode_{false};

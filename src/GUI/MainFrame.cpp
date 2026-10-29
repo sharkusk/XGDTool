@@ -341,6 +341,8 @@ std::string MainFrame::get_file_type_string(FileType type)
             return "DIR";
         case FileType::XBE:
             return "XBE";
+        case FileType::XBLA:
+            return "XBLA";
         default:
             return "UNKNOWN";
     }

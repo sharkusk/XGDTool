@@ -15,6 +15,7 @@ execute_process(COMMAND ${VCPKG_DIR}/vcpkg install cli11:x64-windows-static)
 execute_process(COMMAND ${VCPKG_DIR}/vcpkg install zstd:x64-windows-static)
 execute_process(COMMAND ${VCPKG_DIR}/vcpkg install openssl:x64-windows-static)
 execute_process(COMMAND ${VCPKG_DIR}/vcpkg install curl:x64-windows-static)
+execute_process(COMMAND ${VCPKG_DIR}/vcpkg install zlib:x64-windows-static)
 
 # Included before option(ENABLE_GUI). Unset means the default GUI build.
 if(NOT DEFINED ENABLE_GUI OR ENABLE_GUI)

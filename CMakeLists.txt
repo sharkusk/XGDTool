@@ -91,6 +91,9 @@ set(SRC
     ${SRC_DIR}/Utils/StringUtils.cpp
 
     ${SRC_DIR}/Formats/Xiso.cpp
+
+    ${SRC_DIR}/Stfs/StfsReader.cpp
+    ${SRC_DIR}/Zip/ZipArchive.cpp
 )
 
 if (ENABLE_GUI)
@@ -123,6 +126,7 @@ if (WIN32)
     find_package(CLI11 CONFIG REQUIRED)
     find_package(OpenSSL CONFIG REQUIRED)
     find_package(CURL REQUIRED)
+    find_package(ZLIB REQUIRED)
     if(ENABLE_GUI)
         find_package(wxWidgets CONFIG REQUIRED)
     endif()
@@ -137,6 +141,7 @@ if (WIN32)
         OpenSSL::SSL 
         OpenSSL::Crypto
         CURL::libcurl
+        ZLIB::ZLIB
     )
 
     if(ENABLE_GUI)
@@ -177,6 +182,7 @@ elseif(UNIX)
     pkg_check_modules(ZSTD REQUIRED IMPORTED_TARGET libzstd)
     find_package(OpenSSL REQUIRED)
     find_package(CURL REQUIRED)
+    find_package(ZLIB REQUIRED)
     if(ENABLE_GUI)
         find_package(wxWidgets REQUIRED COMPONENTS core base)
 
@@ -209,6 +215,7 @@ elseif(UNIX)
         PkgConfig::ZSTD
         ${OPENSSL_LIBRARIES} 
         ${CURL_LIBRARIES} 
+        ZLIB::ZLIB
     )
 
     if(ENABLE_GUI)
