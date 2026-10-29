@@ -6,6 +6,7 @@
 #include <zlib.h>
 
 #include "Zip/ZipArchive.h"
+#include "Utils/PathCase.h"
 #include "XGDException.h"
 
 namespace {
@@ -343,6 +344,20 @@ void ZipArchive::extract(const std::filesystem::path& zip_path, const std::files
     input.seekg(0, std::ios::end);
     uint64_t file_size = static_cast<uint64_t>(input.tellg());
 
+    const std::vector<ZipEntry> entries = read_central_directory(input, file_size);
+    std::vector<std::string> paths;
+    paths.reserve(entries.size());
+    for (const ZipEntry& entry : entries)
+    {
+        std::filesystem::path relative;
+        if (!safe_zip_path(entry.name, relative) || relative.empty())
+        {
+            continue;
+        }
+        paths.push_back(relative.generic_string());
+    }
+    PathCase::reject_host_collisions(paths, out_directory);
+
     std::error_code error;
     std::filesystem::create_directories(out_directory, error);
     if (error)
@@ -350,7 +365,7 @@ void ZipArchive::extract(const std::filesystem::path& zip_path, const std::files
         throw XGDException(ErrCode::FS_MKDIR, HERE(), error.message());
     }
 
-    for (const ZipEntry& entry : read_central_directory(input, file_size))
+    for (const ZipEntry& entry : entries)
     {
         if ((entry.flags & 0x1) != 0)
         {

@@ -2,6 +2,7 @@
 #include <thread>
 
 #include "Executable/ExeTool.h"
+#include "Utils/PathCase.h"
 #include "Utils/StringUtils.h"
 #include "ImageExtractor/ImageExtractor.h"
 
@@ -11,7 +12,18 @@ ImageExtractor::ImageExtractor(ImageReader& image_reader, TitleHelper& title_hel
 void ImageExtractor::extract(const std::filesystem::path& out_dir_path) 
 {
     const std::vector<Xiso::DirectoryEntry>& dir_entries = image_reader_.directory_entries();
-    
+
+    std::vector<std::string> paths;
+    paths.reserve(dir_entries.size());
+    for (const auto& dir_entry : dir_entries)
+    {
+        if (!dir_entry.path.empty())
+        {
+            paths.push_back(dir_entry.path.generic_string());
+        }
+    }
+    PathCase::reject_host_collisions(paths, out_dir_path);
+
     prog_total_ = image_reader_.total_file_bytes();
     prog_processed_ = 0;
 

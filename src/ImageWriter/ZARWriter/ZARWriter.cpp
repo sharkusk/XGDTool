@@ -1,4 +1,5 @@
 #include "ImageWriter/ZARWriter/ZARWriter.h"
+#include "Utils/PathCase.h"
 
 struct PackContext {
 	std::filesystem::path out_filepath;
@@ -54,20 +55,27 @@ void ZARWriter::convert_from_dir(const std::filesystem::path& out_zar_path)
     uint64_t prog_total = 0;
     uint64_t prog_processed = 0;
 
+    std::error_code ec;
+    std::vector<std::string> archive_paths;
     for (const auto& entry : std::filesystem::recursive_directory_iterator(in_dir_path_)) 
     {
+        std::filesystem::path entry_path = std::filesystem::relative(entry.path(), in_dir_path_, ec);
+        if (!entry_path.empty())
+        {
+            archive_paths.push_back(entry_path.generic_string());
+        }
         if (entry.is_regular_file()) 
         {
             prog_total += std::filesystem::file_size(entry);
         }
     }
+    PathCase::reject_archive_collisions(archive_paths, "a ZAR");
     
 	PackContext pack_context;
 	pack_context.out_filepath = out_zar_path;
 
     ZArchiveWriter z_writer(_pack_NewOutputFile, _pack_WriteOutputData, &pack_context);
 
-    std::error_code ec;
     std::vector<char> buffer(64 * 1024);
 
     XGDLog() << "Writing files to ZAR archive" << XGDLog::Endl;
@@ -132,6 +140,17 @@ void ZARWriter::convert_from_dir(const std::filesystem::path& out_zar_path)
 void ZARWriter::convert_from_iso(const std::filesystem::path& out_zar_path) 
 {
     ImageReader& image_reader = *image_reader_;
+
+    std::vector<std::string> archive_paths;
+    for (const auto& dir_entry : image_reader.directory_entries())
+    {
+        if (!dir_entry.path.empty())
+        {
+            archive_paths.push_back(dir_entry.path.generic_string());
+        }
+    }
+    PathCase::reject_archive_collisions(archive_paths, "a ZAR");
+
 	PackContext pack_context;
 	pack_context.out_filepath = out_zar_path;
     ZArchiveWriter z_writer(_pack_NewOutputFile, _pack_WriteOutputData, &pack_context);

@@ -1,6 +1,7 @@
 #include <cstring>
 
 #include "Stfs/StfsReader.h"
+#include "Utils/PathCase.h"
 #include "XGDException.h"
 #include "XGDLog.h"
 
@@ -353,6 +354,17 @@ void StfsReader::list() const
 
 void StfsReader::extract(const std::filesystem::path& out_directory)
 {
+    std::vector<std::string> paths;
+    paths.reserve(entries_.size());
+    for (const auto& entry : entries_)
+    {
+        if (!entry.path.empty())
+        {
+            paths.push_back(entry.path.generic_string());
+        }
+    }
+    PathCase::reject_host_collisions(paths, out_directory);
+
     std::error_code error;
     std::filesystem::create_directories(out_directory, error);
     if (error)

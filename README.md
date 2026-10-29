@@ -125,7 +125,7 @@ cmake --build build
 
 ## Notes
 
-* On a case-insensitive filesystem (mounted NTFS, or the default APFS volume on macOS), extraction can collide when two disc entries differ only by case. A case-sensitive volume avoids that.
+* If two names differ only by case, extraction stops before writing them when the output volume is case-insensitive. A rebuilt image, including a scrubbed XISO, and a ZAR also stop, because those formats cannot store both names. A case-sensitive volume can hold both names when the output is a directory.
 * While a single XISO part is still open it is named `Name.1.iso`, or `Name.xiso.1.iso` for the default name. The `.1` is removed when the write finishes.
 * Not every option has been tested on Linux and macOS. Creating a ZAR archive from a GoD folder works.
 * Linux downloads are a `.deb` and an AppImage. Install the package with `sudo apt install ./xgdtool_*_amd64.deb`. It uses the distribution's lz4, curl, and OpenSSL, and needs glibc 2.35 or newer. The AppImage bundles those libraries. Mark it executable and run `./XGDTool-x86_64.AppImage --help`.

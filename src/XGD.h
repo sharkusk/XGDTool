@@ -6,7 +6,7 @@
 #include "XGDLog.h"
 #include "XGDException.h"
 
-#define XGDTOOL_VERSION   "1.0.1"
+#define XGDTOOL_VERSION   "1.0.2"
 #define XGDTOOL_DATE      "10.29.26"
 
 namespace XGD {

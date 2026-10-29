@@ -1,18 +1,55 @@
 #include "XGD.h"
 #include "AvlTree/AvlTree.h"
+#include "Utils/PathCase.h"
 
-AvlTree::AvlTree(const std::string& root_name, std::vector<Xiso::DirectoryEntry> directory_entries) 
-    : root_(root_name) 
-{ 
+namespace {
+
+void collect_relative_paths(const std::filesystem::path& root, const std::filesystem::path& directory, std::vector<std::string>& paths)
+{
+    for (const auto& entry : std::filesystem::directory_iterator(directory))
+    {
+        std::error_code error;
+        std::filesystem::path relative = std::filesystem::relative(entry.path(), root, error);
+        if (!relative.empty())
+        {
+            paths.push_back(relative.generic_string());
+        }
+        if (entry.is_directory())
+        {
+            collect_relative_paths(root, entry.path(), paths);
+        }
+    }
+}
+
+}
+
+AvlTree::AvlTree(const std::string& root_name, std::vector<Xiso::DirectoryEntry> directory_entries, std::string collision_format)
+    : root_(root_name)
+{
+    std::vector<std::string> paths;
+    paths.reserve(directory_entries.size());
+    for (const auto& entry : directory_entries)
+    {
+        if (!entry.path.empty())
+        {
+            paths.push_back(entry.path.generic_string());
+        }
+    }
+    PathCase::reject_archive_collisions(paths, collision_format);
+
     root_.start_sector = Xiso::ROOT_DIRECTORY_SECTOR;
     generate_from_directory_entries(directory_entries, &root_.subdirectory);
 	directory_entries.clear();
     calculate_all();
 }
 
-AvlTree::AvlTree(const std::string& root_name, const std::filesystem::path& root_directory) 
-    : root_(root_name) 
+AvlTree::AvlTree(const std::string& root_name, const std::filesystem::path& root_directory, std::string collision_format)
+    : root_(root_name)
 {
+    std::vector<std::string> paths;
+    collect_relative_paths(root_directory, root_directory, paths);
+    PathCase::reject_archive_collisions(paths, collision_format);
+
     root_.start_sector = Xiso::ROOT_DIRECTORY_SECTOR;
     generate_from_filesystem(root_directory, &root_.subdirectory);
     calculate_all();

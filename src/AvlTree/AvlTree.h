@@ -56,8 +56,8 @@ public:
 
     enum class TraversalMethod { PREFIX, INFIX, POSTFIX };
     
-    AvlTree(const std::string& root_name, std::vector<Xiso::DirectoryEntry> directory_entries); 
-    AvlTree(const std::string& root_name, const std::filesystem::path& root_directory);
+    AvlTree(const std::string& root_name, std::vector<Xiso::DirectoryEntry> directory_entries, std::string collision_format = "the rebuilt image");
+    AvlTree(const std::string& root_name, const std::filesystem::path& root_directory, std::string collision_format = "the rebuilt image");
 
     Node* root() { return &root_; }
 

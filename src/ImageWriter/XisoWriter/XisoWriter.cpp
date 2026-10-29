@@ -16,12 +16,12 @@ std::vector<std::filesystem::path> XisoWriter::convert(const std::filesystem::pa
 
     if (image_reader_ && scrub_type_ == ScrubType::FULL) //Full scrub ISO
     {
-        AvlTree avl_tree(image_reader_->name(), image_reader_->directory_entries());
+        AvlTree avl_tree(image_reader_->name(), image_reader_->directory_entries(), "an XISO");
         return convert_to_xiso_from_avl(avl_tree, out_xiso_path);
     }
     else if (!in_dir_path_.empty()) //Create ISO from directory
     {
-        AvlTree avl_tree(in_dir_path_.string(), in_dir_path_);
+        AvlTree avl_tree(in_dir_path_.string(), in_dir_path_, "an XISO");
         return convert_to_xiso_from_avl(avl_tree, out_xiso_path);
     }
 

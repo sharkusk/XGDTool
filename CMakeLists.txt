@@ -89,6 +89,7 @@ set(SRC
 
     ${SRC_DIR}/Utils/EndianUtils.cpp
     ${SRC_DIR}/Utils/StringUtils.cpp
+    ${SRC_DIR}/Utils/PathCase.cpp
 
     ${SRC_DIR}/Formats/Xiso.cpp
 
