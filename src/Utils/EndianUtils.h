@@ -5,9 +5,10 @@
 
 namespace EndianUtils {
 
-    constexpr bool is_big_endian() 
+    inline bool is_big_endian()
     {
-        return ((1 << 24) & 0x01000000) != 0;
+        const uint32_t value = 0x01020304;
+        return reinterpret_cast<const unsigned char*>(&value)[0] == 0x01;
     }
 
     void big_16(uint16_t &value);    // Only swaps if sys is little endian
