@@ -4,10 +4,10 @@ This is a command-line-only fork of [wiredopposite/XGDTool](https://github.com/w
 
 Each [release](https://github.com/sharkusk/XGDTool/releases) includes a CLI binary for all three platforms:
 
-- `XGDTool-windows` (`XGDTool.exe`)
-- `XGDTool-linux`
+- `XGDTool-windows.exe`
+- `xgdtool_<version>_amd64.deb`
 - `XGDTool-x86_64.AppImage`
-- `XGDTool-macos`
+- `XGDTool-macos.zip`
 
 This fork does not build or ship the graphical interface. That program remains in the original repository.
 
@@ -123,4 +123,4 @@ cmake --build build
 
 * On a case-insensitive filesystem (mounted NTFS, or the default APFS volume on macOS), extraction can collide when two disc entries differ only by case. A case-sensitive volume avoids that.
 * Not every option has been tested on Linux and macOS. Creating a ZAR archive from a GoD folder works.
-* `XGDTool-x86_64.AppImage` bundles lz4, curl, and OpenSSL. Mark it executable and run `./XGDTool-x86_64.AppImage --help`. It needs glibc 2.35 or newer, which means Ubuntu 22.04 and other current distributions.
+* Linux downloads are a `.deb` and an AppImage. Install the package with `sudo apt install ./xgdtool_*_amd64.deb`. It uses the distribution's lz4, curl, and OpenSSL, and needs glibc 2.35 or newer. The AppImage bundles those libraries. Mark it executable and run `./XGDTool-x86_64.AppImage --help`.

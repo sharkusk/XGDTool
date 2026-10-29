@@ -21,8 +21,6 @@ jobs:
       matrix:
         include:
           - name: linux
-            os: ubuntu-latest
-          - name: linux-appimage
             os: ubuntu-22.04
           - name: macos
             os: macos-latest
@@ -144,7 +142,7 @@ jobs:
 
       # Built on Ubuntu 22.04 so the bundled libraries ride on glibc 2.35.
       - name: Package AppImage
-        if: matrix.name == 'linux-appimage'
+        if: runner.os == 'Linux'
         env:
           APPIMAGE_EXTRACT_AND_RUN: "1"
           ARCH: x86_64
@@ -166,6 +164,16 @@ jobs:
           appimage="$(echo XGDTool*.AppImage)"
           mv "$appimage" build/dist/XGDTool-x86_64.AppImage
           ./build/dist/XGDTool-x86_64.AppImage --version
+
+      - name: Package deb
+        if: runner.os == 'Linux'
+        run: |
+          set -eu
+          chmod +x .github/scripts/build_deb.sh
+          .github/scripts/build_deb.sh build/dist/XGDTool build/dist
+          sudo apt-get install -y ./build/dist/xgdtool_*_amd64.deb
+          XGDTool --version
+          rm -f build/dist/XGDTool
 
       - name: Upload CLI
         uses: actions/upload-artifact@v7
