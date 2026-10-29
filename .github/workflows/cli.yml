@@ -164,7 +164,9 @@ jobs:
           python3 - << 'PY'
           from PIL import Image
           image = Image.open("resources/app_icon.png").convert("RGBA")
-          image = image.resize((256, 256), Image.Resampling.LANCZOS)
+          # Ubuntu 22.04 ships Pillow 9.0. Image.Resampling arrived in 9.1.
+          resample = getattr(Image, "Resampling", Image).LANCZOS
+          image = image.resize((256, 256), resample)
           image.save("/tmp/xgdtool-256.png")
           PY
           tools="$(mktemp -d)"
