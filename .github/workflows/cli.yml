@@ -160,7 +160,13 @@ jobs:
           ARCH: x86_64
         run: |
           set -eu
-          sudo apt-get install -y patchelf
+          sudo apt-get install -y patchelf python3-pil
+          python3 - << 'PY'
+          from PIL import Image
+          image = Image.open("resources/app_icon.png").convert("RGBA")
+          image = image.resize((256, 256), Image.Resampling.LANCZOS)
+          image.save("/tmp/xgdtool-256.png")
+          PY
           tools="$(mktemp -d)"
           curl -fsSL -o "$tools/linuxdeploy-x86_64.AppImage" \
             https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
@@ -171,7 +177,7 @@ jobs:
           linuxdeploy-x86_64.AppImage --appdir AppDir \
             --executable build/dist/XGDTool \
             --desktop-file resources/xgdtool.desktop \
-            --icon-file resources/app_icon.png \
+            --icon-file /tmp/xgdtool-256.png \
             --output appimage
           appimage="$(echo XGDTool*.AppImage)"
           mv "$appimage" build/dist/XGDTool-x86_64.AppImage
