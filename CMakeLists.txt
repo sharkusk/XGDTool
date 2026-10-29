@@ -130,7 +130,7 @@ if (WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE
         zarchive
 
-        lz4::liblz4
+        lz4::lz4
         zstd::libzstd
         CLI11::CLI11
         nlohmann_json::nlohmann_json
